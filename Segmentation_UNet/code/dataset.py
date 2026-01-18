@@ -2,19 +2,22 @@ import torch.utils.data as data
 import os
 import PIL.Image as Image
 
-#data.Dataset:
-#所有子类应该override__len__和__getitem__，前者提供了数据集的大小，后者支持整数索引，范围从0到len(self)
+# data.Dataset:
+# All subclasses should override __len__ and __getitem__. The former returns the size of the dataset,
+# and the latter supports integer indexing from 0 to len(self)-1.
 
 class LiverDataset(data.Dataset):
-    #创建LiverDataset类的实例时，就是在调用init初始化
-    def __init__(self,root,transform = None,target_transform = None):#root表示图片路径
-        n = len(os.listdir(root))//2 #os.listdir(path)返回指定路径下的文件和文件夹列表。/是真除法,//对结果取整
+    # When creating an instance of LiverDataset, __init__ is called to initialize.
+    def __init__(self,root,transform = None,target_transform = None): # root is the image directory
+        if not os.path.isdir(root):
+            raise FileNotFoundError(f"Dataset root directory not found: {root}")
+        n = len(os.listdir(root))//2  # number of pairs (image and mask). Uses integer division.
         
         imgs = []
         for i in range(n):
-            img = os.path.join(root,"%03d.png"%i)#os.path.join(path1[,path2[,......]]):将多个路径组合后返回
+            img = os.path.join(root,"%03d.png"%i)  # join directory and filename
             mask = os.path.join(root,"%03d_mask.png"%i)
-            imgs.append([img,mask])#append只能有一个参数，加上[]变成一个list
+            imgs.append([img,mask])  # append the pair [image, mask]
         
         self.imgs = imgs
         self.transform = transform
@@ -29,8 +32,8 @@ class LiverDataset(data.Dataset):
             img_x = self.transform(img_x)
         if self.target_transform is not None:
             img_y = self.target_transform(img_y)
-        return img_x,img_y#返回的是图片
+        return img_x,img_y  # return the tensors
     
     
     def __len__(self):
-        return len(self.imgs)#400,list[i]有两个元素，[img,mask]
+        return len(self.imgs)  # number of image-mask pairs

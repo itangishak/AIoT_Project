@@ -5,7 +5,7 @@ class DoubleConv(nn.Module):
     def __init__(self,in_ch,out_ch):
         super(DoubleConv,self).__init__()
         self.conv = nn.Sequential(
-                nn.Conv2d(in_ch,out_ch,3,padding=1),#in_ch、out_ch是通道数
+                nn.Conv2d(in_ch,out_ch,3,padding=1),# in_ch and out_ch are channel counts
                 nn.BatchNorm2d(out_ch),
                 nn.ReLU(inplace = True),
                 nn.Conv2d(out_ch,out_ch,3,padding=1),
@@ -20,7 +20,7 @@ class UNet(nn.Module):
     def __init__(self,in_ch,out_ch):
         super(UNet,self).__init__()
         self.conv1 = DoubleConv(in_ch,64)
-        self.pool1 = nn.MaxPool2d(2)#每次把图像尺寸缩小一半
+        self.pool1 = nn.MaxPool2d(2)# Each pooling halves the spatial dimension
         self.conv2 = DoubleConv(64,128)
         self.pool2 = nn.MaxPool2d(2)
         self.conv3 = DoubleConv(128,256)
@@ -28,7 +28,7 @@ class UNet(nn.Module):
         self.conv4 = DoubleConv(256,512)
         self.pool4 = nn.MaxPool2d(2)
         self.conv5 = DoubleConv(512,1024)
-        #逆卷积
+        # Transposed convolution (upsampling)
         self.up6 = nn.ConvTranspose2d(1024,512,2,stride=2)
         self.conv6 = DoubleConv(1024,512)
         self.up7 = nn.ConvTranspose2d(512,256,2,stride=2)
@@ -52,7 +52,7 @@ class UNet(nn.Module):
         p4 = self.pool4(c4)
         c5 = self.conv5(p4)
         up_6 = self.up6(c5)
-        merge6 = torch.cat([up_6,c4],dim=1)#按维数1（列）拼接,列增加
+        merge6 = torch.cat([up_6,c4],dim=1)# Concatenate along channel dimension (dim=1)
         c6 = self.conv6(merge6)
         up_7 = self.up7(c6)
         merge7 = torch.cat([up_7,c3],dim=1)
