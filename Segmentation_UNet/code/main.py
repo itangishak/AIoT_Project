@@ -24,20 +24,36 @@ def train_model(model,criterion,optimizer,dataload,num_epochs=20):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
         dataset_size = len(dataload.dataset)
-        epoch_loss = 0
-        step = 0  # number of mini-batches
-        for x, y in dataload:  # iterate over mini-batches
-            optimizer.zero_grad()  # zero gradients each mini-batch
+        epoch_loss = 0.0
+        step = 0
+        correct = 0
+        total = 0
+        tp = 0.0
+        pred_sum = 0.0
+        true_sum = 0.0
+        for x, y in dataload:
+            optimizer.zero_grad()
             inputs = x.to(device)
             labels = y.to(device)
-            outputs = model(inputs)  # forward pass
-            loss = criterion(outputs, labels)  # compute loss
-            loss.backward()  # backpropagate
-            optimizer.step()  # update parameters
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
             epoch_loss += loss.item()
             step += 1
-            print("%d/%d,train_loss:%0.3f" % (step, dataset_size // dataload.batch_size, loss.item()))
-        print("epoch %d loss:%0.3f" % (epoch, epoch_loss))
+            preds = (outputs > 0.5).float()
+            labs = (labels > 0.5).float()
+            correct += (preds == labs).sum().item()
+            total += labels.numel()
+            tp += (preds * labs).sum().item()
+            pred_sum += preds.sum().item()
+            true_sum += labs.sum().item()
+            print("%d/%d,train_loss:%0.3f" % (step, max(1, dataset_size // dataload.batch_size), loss.item()))
+        avg_loss = epoch_loss / max(1, step)
+        train_acc = correct / total if total > 0 else 0.0
+        dice = (2 * tp) / (pred_sum + true_sum + 1e-8) if (pred_sum + true_sum) > 0 else 0.0
+        iou = tp / (pred_sum + true_sum - tp + 1e-8) if (pred_sum + true_sum - tp) > 0 else 0.0
+        print("epoch %d avg_loss:%0.4f train_acc:%0.4f dice:%0.4f iou:%0.4f" % (epoch, avg_loss, train_acc, dice, iou))
     torch.save(model.state_dict(),'weights_%d.pth' % epoch)  # save model weights for the last epoch
     return model
 
@@ -65,8 +81,9 @@ def train():
 
 # Test
 def test():
-    model = unet.UNet(3,1)
-    model.load_state_dict(torch.load(args.weight,map_location='cpu'))
+    model = unet.UNet(3,1).to(device)
+    state = torch.load(args.weight, map_location=device)
+    model.load_state_dict(state)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base_data_dir = os.path.normpath(os.path.join(script_dir, '..', 'data'))
     val_dir = os.path.join(base_data_dir, "val")
@@ -74,16 +91,35 @@ def test():
         raise FileNotFoundError(f"Dataset directory not found: {val_dir}. Expected sibling 'data/val' relative to this script")
     liver_dataset = LiverDataset(val_dir, transform=x_transform, target_transform=y_transform)
     dataloaders = DataLoader(liver_dataset)  # batch_size defaults to 1
+    criterion = torch.nn.BCELoss()
     model.eval()
-    import matplotlib.pyplot as plt
-    plt.ion()
+    total_loss = 0.0
+    step = 0
+    correct = 0
+    total = 0
+    tp = 0.0
+    pred_sum = 0.0
+    true_sum = 0.0
     with torch.no_grad():
-        for x, _ in dataloaders:
-            y=model(x)
-            img_y=torch.squeeze(y).numpy()
-            plt.imshow(img_y)
-            plt.pause(0.01)
-        plt.show()
+        for x, y in dataloaders:
+            inputs = x.to(device)
+            labels = y.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            total_loss += loss.item()
+            step += 1
+            preds = (outputs > 0.5).float()
+            labs = (labels > 0.5).float()
+            correct += (preds == labs).sum().item()
+            total += labels.numel()
+            tp += (preds * labs).sum().item()
+            pred_sum += preds.sum().item()
+            true_sum += labs.sum().item()
+    avg_loss = total_loss / max(1, step)
+    test_acc = correct / total if total > 0 else 0.0
+    dice = (2 * tp) / (pred_sum + true_sum + 1e-8) if (pred_sum + true_sum) > 0 else 0.0
+    iou = tp / (pred_sum + true_sum - tp + 1e-8) if (pred_sum + true_sum - tp) > 0 else 0.0
+    print("Test avg_loss:%0.4f test_acc:%0.4f dice:%0.4f iou:%0.4f" % (avg_loss, test_acc, dice, iou))
 
 
 if __name__ == '__main__':
