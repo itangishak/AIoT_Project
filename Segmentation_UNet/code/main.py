@@ -119,7 +119,7 @@ def test():
     test_acc = correct / total if total > 0 else 0.0
     dice = (2 * tp) / (pred_sum + true_sum + 1e-8) if (pred_sum + true_sum) > 0 else 0.0
     iou = tp / (pred_sum + true_sum - tp + 1e-8) if (pred_sum + true_sum - tp) > 0 else 0.0
-    print("Test avg_loss:%0.4f test_acc:%0.4f dice:%0.4f iou:%0.4f" % (avg_loss, test_acc, dice, iou))
+    print("Test avg_loss:%0.4f test_acc:%0.4f dice:%0.4f iou:%0.4f" % (avg_loss, test_acc, dice, iou)) #needed for report final 
 
 
 if __name__ == '__main__':

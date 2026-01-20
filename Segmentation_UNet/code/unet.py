@@ -6,16 +6,15 @@ class DoubleConv(nn.Module):
         super(DoubleConv,self).__init__()
         self.conv = nn.Sequential(
                 nn.Conv2d(in_ch,out_ch,3,padding=1),# in_ch and out_ch are channel counts
-                nn.BatchNorm2d(out_ch),
+                nn.BatchNorm2d(out_ch), # Batch normalization for stable training
                 nn.ReLU(inplace = True),
                 nn.Conv2d(out_ch,out_ch,3,padding=1),
-                nn.BatchNorm2d(out_ch),
+                nn.BatchNorm2d(out_ch), # Batch normalization for stable training
                 nn.ReLU(inplace = True)  
             )
     def forward(self,x):
         return self.conv(x)
-
-
+              
 class UNet(nn.Module):
     def __init__(self,in_ch,out_ch):
         super(UNet,self).__init__()
